@@ -22,7 +22,7 @@ def build_features(df):
 
 if __name__ == '__main__':
     print("Loading dataset...")
-    df = pd.read_csv('../data/creditcard.csv')
+    df = pd.read_csv(r'C:\Projects\BehaviorGuard\ml\data\creditcard.csv')
     print(f"Dataset shape: {df.shape}")
     print(f"Fraud cases: {df['Class'].sum()}")
     print(f"Normal cases: {(df['Class']==0).sum()}")
