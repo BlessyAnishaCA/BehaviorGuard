@@ -4,9 +4,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-# ── Load features ──────────────────────────────────────────────
+# ── Load only 5 features ────────────────────────────────────
 print("Loading features...")
-X = pd.read_csv('../data/features.csv').values.astype('float32')
+df = pd.read_csv('../data/features.csv')
+
+# Use only these 5 columns
+feature_cols = ['amount_log', 'time_norm', 'V1', 'V2', 'V3']
+X = df[feature_cols].values.astype('float32')
 y = pd.read_csv('../data/labels.csv').values.ravel()
 
 # Train only on normal transactions
@@ -17,28 +21,23 @@ X_tensor = torch.tensor(X_normal)
 dataset   = TensorDataset(X_tensor, X_tensor)
 loader    = DataLoader(dataset, batch_size=64, shuffle=True)
 
-# ── Define Autoencoder ─────────────────────────────────────────
+# ── Define Autoencoder ──────────────────────────────────────
 class Autoencoder(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 16),
-            nn.ReLU(),
-            nn.Linear(16, 8),
-            nn.ReLU()
+            nn.Linear(5, 8), nn.ReLU(),
+            nn.Linear(8, 4), nn.ReLU()
         )
         self.decoder = nn.Sequential(
-            nn.Linear(8, 16),
-            nn.ReLU(),
-            nn.Linear(16, input_dim)
+            nn.Linear(4, 8), nn.ReLU(),
+            nn.Linear(8, 5)
         )
-
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
-# ── Train ──────────────────────────────────────────────────────
-input_dim = X.shape[1]
-model     = Autoencoder(input_dim)
+# ── Train ───────────────────────────────────────────────────
+model     = Autoencoder()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.MSELoss()
 
@@ -55,6 +54,5 @@ for epoch in range(30):
     if (epoch + 1) % 5 == 0:
         print(f"Epoch {epoch+1}/30  Loss: {total_loss/len(loader):.4f}")
 
-# ── Save ───────────────────────────────────────────────────────
 torch.save(model.state_dict(), '../models/autoencoder.pth')
 print("Model saved to models/autoencoder.pth ✅")
