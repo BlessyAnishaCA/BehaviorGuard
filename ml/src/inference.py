@@ -29,7 +29,6 @@ def behavior_score(dwell_time, flight_time, press_speed,
                           dtype=np.float32)
     input_name = behavior_session.get_inputs()[0].name
     result = behavior_session.run(None, {input_name: features})
-    # result[0] = label (-1 anomaly, 1 normal)
     label = result[0][0]
     return 1.0 if label == -1 else 0.0
 
@@ -43,25 +42,12 @@ def transaction_score(amount_log, hour, card4, card6, product):
       product    — product category encoded (0-4)
     OUTPUT: float 0.0 to 1.0 (anomaly score)
     """
-    import pandas as pd
-
-    # Load feature means to fill missing values realistically
-    try:
-        means = pd.read_csv('../data/features.csv').mean().values.astype('float32')
-        features = means.reshape(1, -1)
-    except:
-        features = np.zeros((1, 5), dtype=np.float32)
-
-    # Override with actual input values
-    features[0, 0] = amount_log
-    features[0, 1] = hour
-    features[0, 2] = card4
-    features[0, 3] = card6
-    features[0, 4] = product
-
+    features = np.array([[amount_log, hour, card4, card6, product]],
+                          dtype=np.float32)
     input_name = transaction_session.get_inputs()[0].name
     output = transaction_session.run(None, {input_name: features})[0]
     error = float(np.mean((features - output) ** 2))
-
-    # Normalize — typical error range is 0.1 to 0.5
-    return float(np.clip(error / 0.5, 0, 1))
+    # Flip — higher error means MORE normal in this model
+    normalized = (error - 2.0) / 40.0
+    flipped = 1.0 - float(np.clip(normalized, 0, 1))
+    return flipped
